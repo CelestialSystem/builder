@@ -3,6 +3,7 @@ import * as os from 'os';
 const fs = require('fs');
 import { Utilities } from "../Utilities";
 import { SenchaCmdPanelHTML } from "./SenchaCmdPanelHtml";
+import { spawn, spawnSync, SpawnSyncReturns } from "child_process";
 
 export class SenchaCmdPanel {
   public _context: vscode.ExtensionContext;
@@ -61,7 +62,7 @@ export class SenchaCmdPanel {
 
   public messagesFromWebview = (webviewPanel: vscode.WebviewPanel, context: vscode.ExtensionContext) => {
 
-    webviewPanel.webview.onDidReceiveMessage((message) => {
+    webviewPanel.webview.onDidReceiveMessage(async (message) => {
       console.log(message);
       switch (message.command) {
         case "open":
@@ -77,9 +78,12 @@ export class SenchaCmdPanel {
           const term = vscode.window.createTerminal(`Sencha Builder`);
           term.show();
           term.sendText(`chdir ${os.homedir()}/SenchaApps`);
+          // Replace this with ext-gen. At the time of writing this ext-gen is broken for everyone.
           var cmd = `sencha generate app --ext@${message.version} -${message.toolkit} --theme-name theme-${message.theme} ${message.applicationName} ${message.applicationPath}/${message.applicationName}`;
           term.sendText(cmd);
-
+          const conf = spawnSync("npm", ["whoami", "--registry=https://npm.sencha.com"]);
+          const prefix = `${message.applicationPath}/${message.applicationName}`;
+          await this.sdkPreInstall(conf, prefix, message.version);
           this._toolkit = message.toolkit;
           this._theme = message.theme;
           this._applicationName = message.applicationName;
@@ -90,6 +94,52 @@ export class SenchaCmdPanel {
     });
   };
 
+  private sdkPreInstall(conf: SpawnSyncReturns<string>, prefix: string, version: string) {
+    if (conf.status === 0) {
+      /**
+       * If the exit code is 0 that means there is an existing session.
+       * The problem with this is that there is no way to validate the token.
+       * For this POC it will be assumed the token is valid and try to 
+       * initiate the sdk install via npm.
+       */
+      vscode.window.showInformationMessage(`Installing SDK on behalf of ${conf
+        .output
+        .toString()
+      }`);
+      this.installSdk(prefix, version);
+    } else {
+      vscode.window.withProgress({
+        location: vscode.ProgressLocation.Window,
+        cancellable: false,
+        title: 'Logging into npm.sencha.com'
+      }, async (progress) => {
+
+        progress.report({ increment: 0 });
+
+        const code = await this.addNpmUser();
+        if (code !== 0) {
+          // Assume the trial version is installed if the user is not logged in.
+          vscode.window.showErrorMessage("Login failed for npm.sencha.com. Installing sdk trial version.");
+        } else {
+          vscode.window.showInformationMessage("Login successful for npm.sencha.com");
+        }
+        this.installSdk(prefix, version);
+        progress.report({ increment: 100 });
+      });
+    }
+  }
+
+  /**
+   * @description Spawns npm install to install specified sdk.
+   * @param prefix string Path to install the module to.
+   * @param version string Version of SDK to install.
+   */
+  private installSdk(prefix: string, version: string) {
+    const sdkTerm = vscode.window.createTerminal(`SDK terminal`);
+    sdkTerm.show();
+    sdkTerm.sendText(`npm install --prefix ${prefix} @sencha/ext@${version}`);
+  }
+
   public dispose() {
     SenchaCmdPanel.currentPanel = undefined;
     this._panel.dispose();
@@ -99,6 +149,91 @@ export class SenchaCmdPanel {
         x.dispose();
       }
     }
+  }
+
+  /**
+   * 
+   * @description This function spawns the npm adduser command asynchronously.
+   * It monitors the output for uname, email and password fields.
+   * If found inputs values provided by the user. 
+   * @returns Promise
+   */
+  private async addNpmUser() {
+    const email = await vscode.window.showInputBox({
+      ignoreFocusOut: true,
+      prompt: "Enter the email for https://npm.sencha.com"
+    }) || "sencha.extjs.enterprise@gmail.com";
+
+    const username = await vscode.window.showInputBox({
+      prompt: 'Username for https://npm.sencha.com',
+      ignoreFocusOut: true,
+    });
+
+    const password = await vscode.window.showInputBox({
+      prompt: 'Password for https://npm.sencha.com',
+      ignoreFocusOut: true,
+      password: true
+    });
+    
+    if (!username || !password) {
+      vscode.window.showInformationMessage("Installing SDK without adding sencha registry");
+      return Promise.resolve(1);
+    }
+    return new Promise((resolve, reject) => {
+      const registry = 'https://npm.sencha.com/';
+      const scope = '@sencha';
+      const args = [`adduser`, `--registry=${registry}`, `--scope=${scope}`];
+      const npm = spawn('npm', args, {
+        stdio: ['pipe', 'pipe', 'inherit'],
+        shell: true
+      });
+
+      let count = 0;
+
+      /**
+       * Used to keep track of the current step. This is necessary 
+       * to feed the process with the necessary data. Assumes the order of steps
+       * wont change.
+       * @param step integer current step
+       * @param count integer step count
+       */
+      function checkStep(step: number, count: number) {
+        if (count > step) {
+          process.exit(1);
+        }
+      }
+
+      npm.stdout.on('data', (data) => {
+        const str = data.toString();
+        process.stdout.write(str);
+        if (str.match(/username/i)) {
+          checkStep(0, count);
+          process.stdout.write(`${username}\n`);
+          npm.stdin.write(username + '\n');
+        } else if (str.match(/password/i)) {
+          checkStep(1, count);
+          process.stdout.write('\n');
+          npm.stdin.write(password + '\n');
+        } else if (str.match(/email/i)) {
+          checkStep(2, count);
+          process.stdout.write(`${email}\n`);
+          npm.stdin.write(email + '\n');
+          npm.stdin.end();
+        } else if (str.match(/.*err.*/i)) {
+          npm.stdin.end();
+        }
+        count++;
+      });
+
+      npm
+      .on('error', err => {
+        return reject(err);
+      })
+      .on('exit', code => {
+        resolve(code);
+      });
+
+    });
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
@@ -299,8 +434,12 @@ export class SenchaCmdPanel {
       </div>
       <script>
         var select = document.getElementById("version");
-        var options = ["7.4.0", "7.3.1", "7.3.0", "7.2.0", "7.1.0","7.0.0","7.0.0-CE","6.7.0","6.7.0-CE","6.6.0-CE","6.6.0","6.5.3","6.5.2","6.5.1","6.5.0","6.2.1","6.2.0","6.0.2","6.0.2","6.0.1","6.0.0","5.1.4","5.1.3","5.1.2","5.1.1","5.1.0","5.0.1","5.0.0","4.2.6","4.1.3","4.0.7","3.4.0"];
-
+        var options =[
+          "7.2.0",
+          "7.3.0",
+          "7.4.0",
+          "7.5.0"
+        ]
         function versionSelection(){
           if(select.value){
             return true;
