@@ -13,9 +13,13 @@ We can also select a component and change the configs of that compoenent using a
 
 ## Requirements
 
-esprima and codegen are the two dependencies of this extension.
+node version - v16.13.0;
 
-After the cloning the repo do a npm install. Once all the dependencies are installed run the extension so it will open it in a new window
+VS code version - 1.63.0
+
+sencha cmd version - v7.4.0.39
+
+After the cloning the repo do a npm install. Once all the dependencies are installed press f5 to open it in debugger mode.
 
 ## Extension Settings
 
