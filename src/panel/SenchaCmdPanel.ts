@@ -390,10 +390,10 @@ private PanelViewContents = `Ext.define('myApp.view.MainPanelView', {
         justify-content: center;
         align-items: center;
       }
-      button:disabled,
-      button[disabled]{
+      vscode-button:disabled,
+      vscode-button[disabled]{
         background-color: #18993f;
-        color: #666666;
+        color: #ffff;
         cursor: no-drop;
       }
       span{
@@ -555,7 +555,7 @@ private PanelViewContents = `Ext.define('myApp.view.MainPanelView', {
             </div>
             <div class="select-container">
               <span>Theme*</span>
-              <vscode-dropdown id="theme" onchange="themeChange()" name="theme" required>
+              <vscode-dropdown id="theme" name="theme" required>
                 <vscode-option value="" selected>Select a theme...</vscode-option>
             	  <vscode-option value="material">material</vscode-option>
             	  <vscode-option value="ios">ios</vscode-option>
@@ -576,7 +576,7 @@ private PanelViewContents = `Ext.define('myApp.view.MainPanelView', {
             <div id="snackbar"></div>
             <div class="content">On click of Submit button a terminal window will start and Sencha Cmd will run.</div>
             <div style="display: flex; justify-content: center; margin-left: 15px;">
-            <button id="validForm" class="button" onclick ="validateForm()" disabled>SUBMIT</button>
+            <vscode-button id="validForm" class="button" onclick ="validateForm()" disabled>SUBMIT</vscode-button>
             </div>
           </form>
         </div>
