@@ -117,6 +117,9 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
         this.updateCode(message.payload,message.location);
         break;
       }
+      case "reloadView":
+        this.reloadView();
+        break;
       case "showCode":
         this.showCode();
         break;
@@ -128,6 +131,10 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
          this.updateCodeConfigs(message.payload);
        } 
     }
+  }
+
+  private reloadView(): void {
+    vscode.commands.executeCommand("workbench.action.reloadWindow")
   }
 
   private loadCompoentConfigs(message: any) {

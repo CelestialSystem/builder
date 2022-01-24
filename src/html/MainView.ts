@@ -17,7 +17,10 @@ export function getMainViewHtml(){
             </div>
         </div>
         <div id="content-frame">
-            <vscode-button id="show-code" style="float: right;margin: 2px 89px;">Show code</vscode-button>
+            <div style="float: right;margin: 2px 89px;">
+                <vscode-button id="reload-view" style="margin-right: 10px">Reload View</vscode-button>
+                <vscode-button id="show-code">Show code</vscode-button>
+            </div>
         </div>
        </div>`;
        return str;

@@ -28,6 +28,11 @@ export class ComponentDropZone {
       }
     }
     addListeners(){
+
+      document.getElementById('reload-view').addEventListener('click',()=>{
+        vscode.postMessage({command: 'reloadView'});
+      });
+
       document.getElementById('show-code').addEventListener('click',()=>{
         vscode.postMessage({command: 'showCode'});
       });
