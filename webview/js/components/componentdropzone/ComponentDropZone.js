@@ -31,9 +31,27 @@ export class ComponentDropZone {
       document.getElementById('show-code').addEventListener('click',()=>{
         vscode.postMessage({command: 'showCode'});
       });
-
+      let selectedTarget;
       document.getElementById('content-frame').addEventListener('click',(event)=>{
-        this.contentFrameClick(event);
+        const contextMenu = document.getElementById("context-menu");
+        if (event.target.offsetParent != contextMenu) {
+          this.contentFrameClick(event);
+        }else{
+          this.contentFrameClick(event, true, selectedTarget);
+        }
+        contextMenu.classList.remove("visible");
+        
+      },false);
+
+      document.getElementById('content-frame').addEventListener('contextmenu',(event)=>{
+        event.preventDefault();
+        selectedTarget = event.target;
+        const contextMenu = document.getElementById("context-menu");
+        const { clientX: mouseX, clientY: mouseY } = event;
+
+        contextMenu.style.top = `${mouseY}px`;
+        contextMenu.style.left = `${mouseX}px`;
+        contextMenu.classList.add("visible");
       },false);
 
       window.addEventListener('resize', ()=> {
@@ -42,17 +60,22 @@ export class ComponentDropZone {
         }
       });
     }
-    contentFrameClick(event){ 
+    contentFrameClick(event, deleteProperty, selectedTarget){ 
       event.stopImmediatePropagation();
-      this.parent = event.target;
+      this.parent = deleteProperty ? selectedTarget : event.target;
       while(this.parent!==null){
         if(this.parent.classList.length>0 && this.isClassPresent()){
           const type = this.componentMapper[this.parentCls];
           if(type) {
             this.markComponenent();
             const lc = this.locateComponent();
-            vscode.postMessage({command: 'showConfig',location:lc, payload: {type}});
+            if(deleteProperty){
+              vscode.postMessage({command: 'deleteProperty',location:lc, payload: {type}});
+            }else{
+              vscode.postMessage({command: 'showConfig',location:lc, payload: {type}});
+            }
             event.preventDefault();
+            
           }
           break;
         }
