@@ -9,7 +9,9 @@ export function gridTemplate(code: any){
           }
           page = Ext.create(renderComponent, {
             height: '90%',
-            width: '90%',
+            width: '96%',
+            display: 'flex',
+            margin: '10px',
             renderTo: 'content-frame'
           });
         }
