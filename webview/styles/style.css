@@ -174,23 +174,23 @@ table td:first-child:hover .help-icon{
 
 #context-menu {
   position: fixed;
-  z-index: 10000;
+  z-index: 100000000000000000;
   width: 150px;
-  background: var(--vscode-editor-background);
+  background: white;
+  box-shadow: 2px 2px 5px 0 rgba(0, 0, 0, 0.21), 2px 2px 6px 0 rgba(0, 0, 0, 0.18);
   border-radius: 5px;
   display: none;
 }
 
 #context-menu .item {
   padding: 8px 10px;
-  font-size: 15px;
-  color: var(--vscode-input-foreground);
+  color: black;
   cursor: pointer;
   border-radius: inherit;
 }
 
 #context-menu .item:hover{
-   background: var(--vscode-editor-background);
+   background: white;
 }
 #context-menu.visible{
    display: block;
