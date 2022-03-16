@@ -171,3 +171,27 @@ table td:first-child:hover .help-icon{
    left: 50%;
    transform: translate(-50%, -50%);
 }
+
+#context-menu {
+  position: fixed;
+  z-index: 100000000000000000;
+  width: 150px;
+  background: white;
+  box-shadow: 2px 2px 5px 0 rgba(0, 0, 0, 0.21), 2px 2px 6px 0 rgba(0, 0, 0, 0.18);
+  border-radius: 5px;
+  display: none;
+}
+
+#context-menu .item {
+  padding: 8px 10px;
+  color: black;
+  cursor: pointer;
+  border-radius: inherit;
+}
+
+#context-menu .item:hover{
+   background: white;
+}
+#context-menu.visible{
+   display: block;
+}

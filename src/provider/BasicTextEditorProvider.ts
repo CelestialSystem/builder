@@ -149,6 +149,10 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
          this.loadCompoentConfigs(message);
          break;
        }
+       case 'deleteProperty': {
+        this.deleteProperty(message);
+        break;
+      }
        case 'updateConfigs':{
          this.updateCodeConfigs(message.payload);
          break;
@@ -172,6 +176,10 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
       payload: data
     });
 
+  }
+
+  private deleteProperty(message: any) {
+    this.locateObjectInAst(message.location, undefined, true, true);
   }
   
   private getXtypeName(type: string): string {
@@ -343,7 +351,7 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
     
   }
 
-  private locateObjectInAst(location: any[],message?: any,codeUpdate: boolean=true){
+  private locateObjectInAst(location: any[],message?: any,codeUpdate: boolean=true, deleteProperty: boolean=false){
     location.shift();
     let ast:  any = esprima.parseScript(this._document.getText());
     this._ast = ast;
@@ -369,7 +377,11 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
       else {
         if(location[i].index!==undefined){
           if(this._currrentAst[location[i].index]){
-            this._currrentAst = this._currrentAst[location[i].index];
+            if(i === location.length - 1 && deleteProperty){
+              this._currrentAst.splice(location[i].index, 1)
+            }else{
+              this._currrentAst = this._currrentAst[location[i].index];
+            }
           }
           else if(this._currrentAst && this._currrentAst[0]){
             this._currrentAst = this._currrentAst[0];

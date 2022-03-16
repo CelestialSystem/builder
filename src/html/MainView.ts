@@ -20,6 +20,9 @@ export function getMainViewHtml(){
         </div>
         <div id="content-frame">
             <vscode-button id="show-code" style="float: right;margin: 2px 89px;">Show code</vscode-button>
+            <div id="context-menu">
+                <div class="item">Delete</div>
+            </div>
         </div>
        </div>`;
        return str;
