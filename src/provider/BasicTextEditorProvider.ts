@@ -70,19 +70,10 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
   }
 
   private loadRequiredDepenDencies() :void {
-    let dir: string[] = path.dirname(this._document.uri.path).split('/');
-    let filePath = '';
-    while(dir.length > 0){
-      const dirName = path.resolve(dir.join('/'),'.cache');
-      const isExist = fs.existsSync(dirName);
-      if(isExist) {
-        filePath = dirName;
-        break;
-      }
-      dir.pop();
-    }
+
+    let dir = vscode.workspace.workspaceFolders![0].uri.fsPath;
     try {
-      const appInfo = (fs.readFileSync(path.resolve(filePath+'/filelinks.json'), "utf-8") as string) || '';
+      const appInfo = (fs.readFileSync(path.join(dir,'.cache','fileLinks.json'), "utf-8") as string) || '';
       this._filesLinks= JSON.parse(appInfo);
     }
     catch(err) {
@@ -91,24 +82,34 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
   }
 
   private getExtFraworkLocation(){
-    let dir: string[] = path.dirname(this._document.uri.path).split('/');
-    let appPath = '';
-    while(dir.length > 0){
-      const dirName = path.resolve(dir.join('/'),'app.json');
-      const isExist = fs.existsSync(dirName);
-      if(isExist) {
-        appPath = dirName;
-        break;
-      }
-      dir.pop();
-    }
+    // let dir: string[] = path.dirname(this._document.uri.path).split('/');
+    // let appPath = '';
+    // while(dir.length > 0){
+    //   const dirName = path.resolve(dir.join('/'),'app.json');
+    //   const isExist = fs.existsSync(dirName);
+    //   if(isExist) {
+    //     appPath = dirName;
+    //     break;
+    //   }
+    //   dir.pop();
+    // }
 
-    if(!appPath) {
-      return;
-    }
+    // if(!appPath) {
+    //   return;
+    // }
 
+    // try {
+    //   const appInfo = (fs.readFileSync(appPath, "utf-8") as string) || '';
+    //   const parsedAppinfo = JSON.parse(appInfo);
+    //   this._toolkit = parsedAppinfo.builds.desktop.toolkit;
+    //   this._appName = parsedAppinfo.namespace;
+    // }
+    // catch(err) {
+    //   throw(err);
+    // }
+    let dir = vscode.workspace.workspaceFolders![0].uri.fsPath;
     try {
-      const appInfo = (fs.readFileSync(appPath, "utf-8") as string) || '';
+      const appInfo = (fs.readFileSync(path.join(dir,'app.json'), "utf-8") as string) || '';
       const parsedAppinfo = JSON.parse(appInfo);
       this._toolkit = parsedAppinfo.builds.desktop.toolkit;
       this._appName = parsedAppinfo.namespace;
@@ -497,7 +498,7 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
       <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, user-scalable=yes">
       ${resourceUrls}
       ${scriptTags}
-      ${extAppFiles}
+      ${extAppFiles?.join(" ")}
       <script type="module" nonce="${nonce}" src="${toolkitUri}"></script>
       <title>ExtJSPanel</title>
       <body>
