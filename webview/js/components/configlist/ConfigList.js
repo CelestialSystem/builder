@@ -126,7 +126,7 @@ export class ConfigList {
         this.addEventConfig(eventName, methodName);
         selectList.remove();
         this.updateEventsCode(eventName, methodName);
-        this.createEventFunction(eventsList.find(event => event.name === eventName), methodName);
+        this.createEventFunction(eventsList.find(event => event.name === eventName), methodName, configs.xtype);
       })
       selectList.style.width = '90%';
       eventListSection.appendChild(selectList);
@@ -333,11 +333,11 @@ export class ConfigList {
       return paramsField;
     }
 
-    createEventFunction(eventConfig, methodName){
+    createEventFunction(eventConfig, methodName, xtype){
       if(eventConfig){
         const params = eventConfig.params.map(param => {
           if(param.name === "this"){
-            param.name = "component";
+            param.name = xtype;
           }
           return param.name;
         });

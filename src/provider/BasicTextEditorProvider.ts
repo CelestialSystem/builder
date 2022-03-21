@@ -23,6 +23,8 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
   public _toolkit: string = '';
   public _componetInfo: any;
   public _filesLinks:any;
+  public _componentConfigs:any = {};
+  public _appInfo:any;
 
   public static register( context: vscode.ExtensionContext ): vscode.Disposable {
     const provider = new BasicTextEditorProvider(context);
@@ -111,6 +113,7 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
     try {
       const appInfo = (fs.readFileSync(path.join(dir,'app.json'), "utf-8") as string) || '';
       const parsedAppinfo = JSON.parse(appInfo);
+      this._appInfo = parsedAppinfo;
       this._toolkit = parsedAppinfo.builds.desktop.toolkit;
       this._appName = parsedAppinfo.namespace;
     }
@@ -165,10 +168,10 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
     }
   }
 
-  private loadCompoentConfigs(message: any) {
+  private async loadCompoentConfigs(message: any) {
     this.locateObjectInAst(message.location, undefined, false);
     const xtypeName = this.getXtypeName(message.payload.type);
-    const data = this.readFileSync('media','data',this._toolkit,`${xtypeName}.json`);
+    const data = await this.fetchConfigs(xtypeName);
     const astMapperData = this.getAstMapperData();
 
     this.webviewPanel.webview.postMessage({
@@ -177,6 +180,19 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
       payload: data
     });
 
+  }
+
+  private fetchConfigs(xtypeName: string){
+    return new Promise(resolve => {
+      if(this._componentConfigs[xtypeName]){
+        resolve(this._componentConfigs[xtypeName]);
+      }else{
+        //To be replaced with BE API call
+        const data = this.readFileSync('media','data',this._toolkit,`${xtypeName}.json`);
+        this._componentConfigs[xtypeName] = data;
+        resolve(data);
+      }
+    });
   }
 
   private deleteProperty(message: any) {
@@ -467,25 +483,18 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
     const styles = ['webview/styles/style.css'] as Array<string>;
     const scripts = [] as Array<string>;
     if(this._toolkit === 'classic'){
-      styles.push(
-        "media/theme-material/resources/theme-material-all_1.css",
-        "media/theme-material/resources/theme-material-all_2.css",
-        "media/theme-material/resources/theme-material-all_3.css"
-        );
-        scripts.push("media/ext-all.js");
+      scripts.push("media/ext-all.js");
     }
     else if(this._toolkit === 'modern'){
-      styles.push(
-        "media/buildertheme-all-debug_1.css",
-        "media/buildertheme-all-debug_2.css",
-        "media/charts-modern-all.css",
-        );
-        scripts.push(
-          "media/ext-modern-all-debug.js",
-          "media/charts-modern.js"
-        );
+      scripts.push(
+        "media/ext-modern-all-debug.js",
+        "media/charts-modern.js"
+      );
     }
-    const resourceUrls = this.getResourseUrl(styles,'css');
+    
+    let resourceUrls = this.getResourseUrl(styles,'css');
+    const bootstrapCssPath = this.getBootstrapCssPath();
+    resourceUrls = resourceUrls +  ` <link rel="stylesheet" href="${vscode.Uri.parse(bootstrapCssPath).with({ 'scheme': 'vscode-resource' })}">`;
     const scriptTags = this.getResourseUrl(scripts);
     const nonce = Utilities.getNonce();
     const codeText = this._document.getText();
@@ -554,5 +563,16 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
     }
 
     return resourceURLS.join(' ');
+  }
+
+  private getBootstrapCssPath(){
+    const bootStrapFilePath = path.join(vscode.workspace.workspaceFolders![0].uri.path, this._appInfo.bootstrap.css);
+    try{
+      const bootstrapFile = fs.readFileSync(bootStrapFilePath, "utf-8");
+      const filePath = bootstrapFile.match(/(?<=\import ').+?(?=')/g) || [];
+      return path.join(vscode.workspace.workspaceFolders![0].uri.path, filePath[0]);
+    }catch(err){
+      throw(err)
+    }
   }
 }
