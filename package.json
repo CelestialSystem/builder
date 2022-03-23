@@ -85,6 +85,9 @@
     "directory-tree": "^3.2.2",
     "escodegen": "~2.0.0",
     "esprima": "~4.0.1",
-    "ext-gen": "github:n0wfal/ext-gen"
+    "ext-gen": "github:n0wfal/ext-gen",
+    "gulp": "^4.0.2",
+    "gulp-uglify": "^3.0.2",
+    "gulp-concat": "^2.6.1"
   }
 }

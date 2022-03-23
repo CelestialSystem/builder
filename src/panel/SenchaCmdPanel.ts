@@ -171,6 +171,12 @@ private PanelViewContents = `Ext.define('myApp.view.MainPanelView', {
   
             try {
               const code = await this.generateApp(message, context);
+              
+              let gulp = vscode.window.createOutputChannel("Gulp");
+              await Utilities.invokeCmd('npx',['gulp', 'default', '--option1', `"${message.applicationPath}/${message.applicationName}/node_modules/@sencha/ext-${message.toolkit}/src/**"`,
+              '--option2', `"${message.applicationPath}/${message.applicationName}/dist"`],
+              {}, gulp);
+             
               if (code !== 0) {
               vscode.window.showErrorMessage("Unable to generate app.");
             } else {
