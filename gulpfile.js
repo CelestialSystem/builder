@@ -4,7 +4,7 @@ const concat = require("gulp-concat");
 
 function js() {
    return src(process.argv[4])
-    .pipe(concat('all.js'))
+    .pipe(concat('ext-modern-all.js'))
     .pipe(uglify())
     .pipe(dest(process.argv[6]));
 }
