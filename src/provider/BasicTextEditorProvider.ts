@@ -482,21 +482,24 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
     ]);
     const styles = ['webview/styles/style.css'] as Array<string>;
     const scripts = [] as Array<string>;
-    if(this._toolkit === 'classic'){
-      scripts.push("media/ext-all.js");
-    }
-    else if(this._toolkit === 'modern'){
-      scripts.push(
-        "media/ext-modern-all-debug.js",
-        "media/charts-modern.js"
-      );
-    }
+    // if(this._toolkit === 'classic'){
+    //   scripts.push("media/ext-all.js");
+    // }
+    // else if(this._toolkit === 'modern'){
+    //   scripts.push(
+    //     "media/ext-modern-all-debug.js",
+    //     "media/charts-modern.js"
+    //   );
+    // }
+
     
     let resourceUrls = this.getResourseUrl(styles,'css');
     const bootstrapCssPath = this.getBootstrapCssPath();
     resourceUrls = resourceUrls +  ` <link rel="stylesheet" href="${vscode.Uri.parse(bootstrapCssPath).with({ 'scheme': 'vscode-resource' })}">`;
-    const scriptTags = this.getResourseUrl(scripts);
+    let scriptTags = this.getResourseUrl(scripts);
     const nonce = Utilities.getNonce();
+    const allJsPath = path.join(vscode.workspace.workspaceFolders![0].uri.path, `.cache/ext-${this._toolkit}-all.js`)
+    scriptTags = scriptTags + `<script nonce="${nonce}"  src="${vscode.Uri.parse(allJsPath).with({ 'scheme': 'vscode-resource' })}"></script>`
     const codeText = this._document.getText();
 
 		return `<!DOCTYPE html>
