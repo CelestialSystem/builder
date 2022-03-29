@@ -3,6 +3,7 @@ import { Logger } from "../Logger";
 import * as path from "path";
 import { controllerFile, mainFile, modelFile } from "./Templates";
 import * as fs from "fs";
+import EventManager from '../shared/EventManager';
 
 export class ViewScaffold {
   public _context: vscode.ExtensionContext;
@@ -49,6 +50,7 @@ export class ViewScaffold {
       fs.writeFileSync(`${dir}/${fileName}ViewController.js`, controllerFile(fileName), "utf-8");
       fs.writeFileSync(`${dir}/${fileName}ViewModel.js`, modelFile(fileName), "utf-8");
       fs.writeFileSync(`${dir}/${fileName}View.scss`, "", "utf-8");
+      EventManager.fireFileChangeEvent();
     } catch (error: any) {
       vscode.window.showErrorMessage("Unable to scaffold view");
       this.channel.show();

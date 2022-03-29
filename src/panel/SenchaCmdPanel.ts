@@ -6,6 +6,10 @@ import { SenchaCmdPanelHTML } from "./SenchaCmdPanelHtml";
 import * as path from "path";
 import { spawn } from 'child_process';
 
+const {gulp,src, dest } = require("gulp");
+const uglify = require("gulp-uglify");
+const concat = require("gulp-concat");
+
 export class SenchaCmdPanel {
   public _context: vscode.ExtensionContext;
   private readonly _extensionUri: vscode.Uri;
@@ -114,6 +118,7 @@ private PanelViewContents = `Ext.define('myApp.view.MainPanelView', {
   }
 
   public messagesFromVSCode = (webviewPanel: vscode.WebviewPanel) => {
+    //this._context.subscriptions.push()
     // this._context.subscriptions.push(
     //   vscode.window.onDidChangeActiveColorTheme((e) => {
     //     console.log(e);
@@ -134,6 +139,10 @@ private PanelViewContents = `Ext.define('myApp.view.MainPanelView', {
         case "open":
           this.openExtApplication();
           break;
+        case "generatebuild":{
+          this.generateBuild()
+          break;
+        }  
         case "runcmd":
           const dirExists = fs.existsSync(`${message.applicationPath}/${message.applicationName}`);
           if (dirExists === true) {
@@ -195,6 +204,37 @@ private PanelViewContents = `Ext.define('myApp.view.MainPanelView', {
     });
   };
 
+  private  generateBuild() :void {
+    const workspacePath = vscode.workspace.workspaceFolders![0].uri.path;
+    const desktopJsonPath = path.join(workspacePath, 'generatedFiles','desktop.json');
+    if(!fs.existsSync(desktopJsonPath)){
+      return;
+    }
+    const desktopJson = JSON.parse(fs.readFileSync(desktopJsonPath, "utf-8"));
+    let loader: string[] = [];
+    const bootFile = desktopJson.paths['Ext.Boot'];
+    if(bootFile) {
+      loader.push(path.join(workspacePath,bootFile));
+    }
+    desktopJson.loadOrder.map((pathDesc: any)=>{
+      if(pathDesc.path.includes('node_modules/@sencha')){
+        loader.push(path.join(workspacePath,pathDesc.path));
+      }
+    }).filter(String);
+    try {
+       const test = src(loader)
+        .pipe(concat('ext-modern-all.js'))
+        .pipe(dest(path.join(workspacePath,'.cache')))
+        .on('finish',()=>{
+          debugger;
+        });
+
+    }
+    catch(err){
+      console.log(err);
+    }
+  }
+  
   private openExtApplication(){
     let uri = vscode.Uri.file(`${this._applicationPath}/${this
       ._applicationName
@@ -203,6 +243,8 @@ private PanelViewContents = `Ext.define('myApp.view.MainPanelView', {
       .slice(1)
       .replace(/[A-Z]/g, (m: any) => "-" + m.toLowerCase())}`);
     vscode.commands.executeCommand('vscode.openFolder', uri);
+    
+    this.generateBuild();
   }
   private openMainView() {
     let uri = vscode.Uri.file(this._document.fileName);
@@ -614,6 +656,7 @@ private PanelViewContents = `Ext.define('myApp.view.MainPanelView', {
             <div class="content">On click of Submit button a terminal window will start and Sencha Cmd will run.</div>
             <div style="display: flex; justify-content: center; margin-left: 15px;">
             <vscode-button id="validForm" class="button" onclick ="validateForm()" disabled>SUBMIT</vscode-button>
+            <vscode-button class="button" onclick ="generateBuild()">GenerateBuild</vscode-button>
             </div>
           </form>
         </div>
@@ -742,6 +785,11 @@ private PanelViewContents = `Ext.define('myApp.view.MainPanelView', {
                error.style.marginRight = "44%";
                return false;    
            }           
+        }
+        function generateBuild(){
+          vscode.postMessage({
+            command: 'generatebuild'
+          })
         }  
       </script>
 

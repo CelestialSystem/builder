@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getMainViewHtml } from "../html/MainView";
 import {gridTemplate} from '../html/grid';
+import EventManager from "../shared/EventManager";
 
 export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider {
   public _context: vscode.ExtensionContext;
@@ -36,8 +37,31 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
     Logger.log(`${Logger.productName}: BasicTextEditorProvider constructor`);
     this._context = context;
     this._extensionUri = context.extensionUri;
+
+    EventManager.fileChangeEvent.event(()=> {
+        this.createAppFileLinks();
+    });
+    this.registerDeleteFileEvent();
   }
 
+  private registerDeleteFileEvent(): void {
+    vscode.workspace.onDidDeleteFiles(()=> {
+      this.createAppFileLinks();
+    });
+  }
+
+  private async createAppFileLinks() {
+    try {
+      let appPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
+      const appFolderPath = path.join(appPath, 'app');
+      this._filesLinks = await Utilities.linker(appFolderPath);
+      fs.writeFileSync(path.join(appPath,'.cache', 'fileLinks.json'), JSON.stringify(this._filesLinks));
+      vscode.commands.executeCommand("workbench.action.webview.reloadWebviewAction");
+    }
+    catch(err){
+      console.log(err);
+    }
+  }
   public async resolveCustomTextEditor( document: vscode.TextDocument, webviewPanel: vscode.WebviewPanel, _token: vscode.CancellationToken ): Promise<void> {
     this._document = document;
     this.getExtFraworkLocation();
@@ -61,7 +85,7 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
     return (vscode.Uri.joinPath(this._extensionUri, ...location)).with({ 'scheme': 'vscode-resource' });
   }
 
-  private readFileSync(...pathArr: string[]): any{
+  private readFileSync(...pathArr: string[]): any {
     try {
       const resolvedPathName = path.resolve(this.getUri(pathArr).fsPath);
       return fs.readFileSync(`${resolvedPathName}`,{encoding:'utf8', flag:'r'});
@@ -482,21 +506,23 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
     ]);
     const styles = ['webview/styles/style.css'] as Array<string>;
     const scripts = [] as Array<string>;
-    if(this._toolkit === 'classic'){
-      scripts.push("media/ext-all.js");
-    }
-    else if(this._toolkit === 'modern'){
-      scripts.push(
-        "media/ext-modern-all-debug.js",
-        "media/charts-modern.js"
-      );
-    }
+    // if(this._toolkit === 'classic'){
+    //   scripts.push("media/ext-all.js");
+    // }
+    // else if(this._toolkit === 'modern'){
+    //   scripts.push(
+    //     "media/ext-modern-all-debug.js",
+    //     "media/charts-modern.js"
+    //   );
+    // }
     
     let resourceUrls = this.getResourseUrl(styles,'css');
     const bootstrapCssPath = this.getBootstrapCssPath();
     resourceUrls = resourceUrls +  ` <link rel="stylesheet" href="${vscode.Uri.parse(bootstrapCssPath).with({ 'scheme': 'vscode-resource' })}">`;
-    const scriptTags = this.getResourseUrl(scripts);
+    let scriptTags = this.getResourseUrl(scripts);
     const nonce = Utilities.getNonce();
+    const allJsPath = path.join(vscode.workspace.workspaceFolders![0].uri.path, `.cache/ext-${this._toolkit}-all.js`);
+    scriptTags = scriptTags + `<script nonce="${nonce}"  src="${vscode.Uri.parse(allJsPath).with({ 'scheme': 'vscode-resource' })}"></script>`
     const codeText = this._document.getText();
 
 		return `<!DOCTYPE html>
@@ -529,8 +555,9 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
 
   }
 
-  getExtAppScriptFiles() :string[]|undefined {
+  getExtAppScriptFiles(scriptFiles = true) :string[]|undefined {
     let scriptsLink:any = [];
+    let modifiedLinks: any = [];
     const nonce = Utilities.getNonce();
     if(!this._filesLinks){
       return ;
@@ -538,13 +565,19 @@ export class BasicTextEditorProvider implements vscode.CustomTextEditorProvider 
     const files = Array.prototype.concat(...Object.values(this._filesLinks)) || [];
     for(let i=0;i<files.length;i++){
       if(!files[i].includes('Application.js')){
-        const modifiedUrl = vscode.Uri.parse(files[i]).with({ 'scheme': 'vscode-resource' });
+        const modifiedUrl = this.getParsedUrl(files[i]);
+        modifiedLinks.push(modifiedUrl.toString());
         scriptsLink.push(`<script nonce="${nonce}" src="${modifiedUrl}"></script>`);
       }
     }
-    return scriptsLink;
+    if(scriptFiles){
+      return scriptsLink;
+    }
+    return modifiedLinks;
   }
-
+  getParsedUrl(url: string): vscode.Uri {
+    return vscode.Uri.parse(url).with({ 'scheme': 'vscode-resource' });
+  }
   private getResourseUrl(relativeUrl: string[], type: string = 'script'):string{
     const resourceURLS = [];
     const nonce = Utilities.getNonce();
